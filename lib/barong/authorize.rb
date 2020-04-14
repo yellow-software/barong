@@ -57,11 +57,11 @@ module Barong
     def validate_session!
       unless @request.env['HTTP_USER_AGENT'] == session[:user_agent] &&
              Time.now.to_i < session[:expire_time] &&
-             find_ip.include?(@request.remote_ip)
+             find_ip.include?(@request.env['HTTP_TRUE_CLIENT_IP'])
         session.destroy
         Rails.logger.debug("Session mismatch! Valid session is: { agent: #{session[:user_agent]}," \
                            " expire_time: #{session[:expire_time]}, ip: #{session[:user_ip]} }," \
-                           " but request contains: { agent: #{@request.env['HTTP_USER_AGENT']}, ip: #{@request.remote_ip} }")
+                           " but request contains: { agent: #{@request.env['HTTP_USER_AGENT']}, ip: #{@request.env['HTTP_TRUE_CLIENT_IP']} }")
 
         error!({ errors: ['authz.client_session_mismatch'] }, 401)
       end
@@ -102,7 +102,7 @@ module Barong
     def validate_restrictions!
       restrictions = Rails.cache.fetch('restrictions', expires_in: 5.minutes) { fetch_restrictions }
 
-      request_ip = @request.remote_ip
+      request_ip = @request.env['HTTP_TRUE_CLIENT_IP']
       country = Barong::GeoIP.info(ip: request_ip, key: :country)
       continent = Barong::GeoIP.info(ip: request_ip, key: :continent)
 
@@ -136,7 +136,7 @@ module Barong
     end
 
     def restrict!
-      Rails.logger.info("Access denied for #{session[:uid]} because ip #{@request.remote_ip} is resticted")
+      Rails.logger.info("Access denied for #{session[:uid]} because ip #{@request.env['HTTP_TRUE_CLIENT_IP']} is resticted")
       error!({ errors: ['authz.access_restricted'] }, 401)
     end
 
@@ -171,7 +171,7 @@ module Barong
         user_id: user_id,
         result: result,
         user_agent: @request.env['HTTP_USER_AGENT'],
-        user_ip: @request.remote_ip,
+        user_ip: @request.env['HTTP_TRUE_CLIENT_IP'],
         path: @path,
         topic: topic,
         verb: @request.env['REQUEST_METHOD'],

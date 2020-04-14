@@ -14,7 +14,7 @@ module API::V2
         csrf_token = SecureRandom.hex(10)
         session.merge!(
           "uid": user.uid,
-          "user_ip": remote_ip,
+          "user_ip": request.env['HTTP_TRUE_CLIENT_IP'],
           "user_agent": request.env['HTTP_USER_AGENT'],
           "expire_time": Time.now.to_i + Barong::App.config.session_expire_time,
           "csrf_token": csrf_token
@@ -83,7 +83,7 @@ module API::V2
         params = {
           category:   'user',
           user_id:    options[:user],
-          user_ip:    remote_ip,
+          user_ip:    request.env['HTTP_TRUE_CLIENT_IP'],
           user_agent: request.env['HTTP_USER_AGENT'],
           topic:      options[:topic],
           action:     options[:action],
@@ -115,7 +115,7 @@ module API::V2
         EventAPI.notify('system.session.create',
                         record: {
                           user: user.as_json_for_event_api,
-                          user_ip: remote_ip,
+                          user_ip: request.env['HTTP_TRUE_CLIENT_IP'],
                           user_agent: request.env['HTTP_USER_AGENT']
                         })
       end
